@@ -1,0 +1,54 @@
+{
+  "name": "website-intelligence-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "test": "node --import tsx --test --test-reporter=spec \"test/**/*.test.ts\"",
+    "dev": "tsx src/server.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit && tsc -p test/tsconfig.json",
+    "start": "node dist/server.js",
+    "prebuild": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run typecheck && npm test"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "mcp-server",
+    "seo",
+    "website-analysis"
+  ],
+  "author": "Sandip Prajapati",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sandipprajapatiinic/website-intelligence-mcp.git"
+  },
+  "homepage": "https://github.com/sandipprajapatiinic/website-intelligence-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/sandipprajapatiinic/website-intelligence-mcp/issues"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@types/node": "^22.20.4",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.0.0",
+    "cheerio": "^1.2.0",
+    "zod": "^4.6.5"
+  },
+  "description": "MCP server that analyzes a public webpage for SEO, metadata, and technical signals, with SSRF-safe fetching.",
+  "bin": {
+    "website-intelligence-mcp": "dist/server.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output (npm pack builds it from src/)
+dist/
+*.tgz
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+
+# OS and editor files
+.DS_Store
+Thumbs.db
