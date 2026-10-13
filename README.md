@@ -201,7 +201,7 @@ Both apply the same rules:
 npm test
 ```
 
-Runs 199 tests with Node's built-in test runner (`node:test`), in about 11 seconds. Most of that is one check of the 10-second timeout.
+Runs 211 tests with Node's built-in test runner (`node:test`), in about 11 seconds. Most of that is one check of the 10-second timeout.
 
 The suite is deterministic and doesn't need internet access:
 - **Stub server:** a local HTTP server serves the test pages, redirects, oversized bodies, stalled responses, and gzip responses.
@@ -216,6 +216,7 @@ The production URL, DNS, redirect, timeout, size, and content-type checks run un
 | `test/fetch-page.test.ts` | `fetchPage`, `fetchPageDetails`, and `safeFetch`: success, redirects, content type, status codes, size limits, gzip, closing connections for unread bodies, timeouts |
 | `test/dns-rebinding.test.ts` | The connect-time DNS check, for direct requests, redirects, analyzers, and `analyze_website` |
 | `test/analyzers.test.ts` | All 26 analyzers on a fully populated page and on a bare page, the common result fields, each analyzer's field names and order, and network usage |
+| `test/structured-data-rules.test.ts` | `analyze_structured_data` status rules (no JSON-LD, invalid JSON-LD, no `@type`, valid with `@type`) and agreement with `analyze_schema` |
 | `test/analyzer-result.test.ts` | The shared result types (compile-time checks run by `npm run typecheck`) |
 | `test/analyze-website.test.ts` | The combined result and its 26 sections (compared with direct analyzer calls), the single page fetch and 3-request budget, no sharing between calls, and partial errors |
 | `test/mcp-server.test.ts` | Starts the real stdio server: registration of all 27 tools, their input schemas, tool calls, and rejection of unsafe URLs |

@@ -65,6 +65,11 @@ export function analyzeStructuredDataRules(html: string): StructuredDataAnalysis
     })
     .flat();
 
+  // Same rule as the schema analyzer: JSON-LD without a non-blank @type needs improvement.
+  if (schemas.length > 0 && !schemaTypes.some((type) => type.trim())) {
+    issues.push("JSON-LD is present but no @type was detected");
+  }
+
   if (jsonLdBlocks.length === 0) {
     issues.push("No JSON-LD structured data found");
   }
