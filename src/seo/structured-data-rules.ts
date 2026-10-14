@@ -14,13 +14,15 @@ export interface StructuredDataAnalysis {
   recommendation: string;
 }
 
-export function analyzeStructuredDataRules(html: string): StructuredDataAnalysis {
+export function analyzeStructuredDataRules(
+  html: string,
+): StructuredDataAnalysis {
   const $ = cheerio.load(html);
-
   const jsonLdBlocks = $('script[type="application/ld+json"]').toArray();
 
   const schemas: unknown[] = [];
   const issues: string[] = [];
+  let hasInvalidJson = false;
 
   for (const block of jsonLdBlocks) {
     const raw = $(block).html()?.trim();
@@ -31,7 +33,7 @@ export function analyzeStructuredDataRules(html: string): StructuredDataAnalysis
     }
 
     try {
-      const parsed = JSON.parse(raw);
+      const parsed: unknown = JSON.parse(raw);
 
       if (Array.isArray(parsed)) {
         schemas.push(...parsed);
@@ -39,57 +41,65 @@ export function analyzeStructuredDataRules(html: string): StructuredDataAnalysis
         schemas.push(parsed);
       }
     } catch {
+      hasInvalidJson = true;
       issues.push("Invalid JSON-LD structured data found");
     }
   }
 
-  const schemaTypes = schemas
-    .map((schema) => {
-      if (
-        typeof schema === "object" &&
-        schema !== null &&
-        "@type" in schema
-      ) {
-        const type = (schema as { "@type"?: unknown })["@type"];
+  const schemaTypes: string[] = [];
 
-        if (Array.isArray(type)) {
-          return type.filter(
-            (value): value is string => typeof value === "string",
-          );
+  for (const schema of schemas) {
+    if (
+      typeof schema !== "object" ||
+      schema === null ||
+      Array.isArray(schema)
+    ) {
+      issues.push("Invalid JSON-LD schema object found");
+      continue;
+    }
+
+    const type = (schema as Record<string, unknown>)["@type"];
+
+    if (typeof type === "string" && type.trim()) {
+      schemaTypes.push(type.trim());
+    } else if (Array.isArray(type)) {
+      for (const item of type) {
+        if (typeof item === "string" && item.trim()) {
+          schemaTypes.push(item.trim());
         }
-
-        return typeof type === "string" ? [type] : [];
       }
-
-      return [];
-    })
-    .flat();
-
-  // Same rule as the schema analyzer: JSON-LD without a non-blank @type needs improvement.
-  if (schemas.length > 0 && !schemaTypes.some((type) => type.trim())) {
-    issues.push("JSON-LD is present but no @type was detected");
+    }
   }
 
   if (jsonLdBlocks.length === 0) {
     issues.push("No JSON-LD structured data found");
   }
 
-  const status =
-    issues.length === 0
-      ? "good"
-      : issues.some((issue) => issue.includes("Invalid"))
-        ? "poor"
+  if (
+    schemas.length > 0 &&
+    !schemaTypes.some((type) => type.trim())
+  ) {
+    issues.push("JSON-LD is present but no @type was detected");
+  }
+
+  const uniqueSchemaTypes = [...new Set(schemaTypes)];
+
+  const status: StructuredDataStatus =
+    hasInvalidJson
+      ? "poor"
+      : issues.length === 0
+        ? "good"
         : "needs_improvement";
 
   return {
     jsonLdCount: jsonLdBlocks.length,
     schemaCount: schemas.length,
-    schemaTypes,
+    schemaTypes: uniqueSchemaTypes,
     status,
-    issues,
+    issues: [...new Set(issues)],
     recommendation:
       status === "good"
         ? "Valid JSON-LD structured data was detected."
-        : "Add valid JSON-LD structured data and review schema implementation.",
+        : "Fix invalid JSON-LD, add missing @type values, and review the structured data implementation.",
   };
 }

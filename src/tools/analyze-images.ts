@@ -17,6 +17,14 @@ export async function analyzeImages(
 
   const images = $("img");
 
+  const missingAlt = images.filter((_, el) => {
+  const alt = $(el).attr("alt");
+  return alt === undefined || alt.trim() === "";
+}).length;
+
+console.error("Total images:", images.length);
+console.error("Images missing/empty alt:", missingAlt);
+
   const totalImages = images.length;
 
   let imagesWithAlt = 0;

@@ -27,9 +27,10 @@ export function analyzeAccessibilityRules(html: string): AccessibilityAnalysis {
   const buttons = $("button").toArray();
   const inputs = $("input, textarea, select").toArray();
 
-  const imagesMissingAlt = images.filter(
-    (el) => $(el).attr("alt") === undefined,
-  ).length;
+  const imagesMissingAlt = images.filter((el) => {
+    const alt = $(el).attr("alt");
+    return alt === undefined || alt.trim().length === 0;
+  }).length;
 
   const linksMissingText = links.filter(
     (el) => $(el).text().trim() === "" && !$(el).attr("aria-label"),
