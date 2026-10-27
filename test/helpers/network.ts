@@ -222,6 +222,58 @@ export async function startStubServer(): Promise<StubServer> {
       return;
     }
 
+    // "no-head.test" rejects HEAD requests, so /sitemap.xml is only reachable with GET.
+    if (host === "no-head.test") {
+      if (path === "/sitemap.xml" && req.method === "HEAD") {
+        res.writeHead(405, { "content-type": "text/plain", allow: "GET" });
+        res.end();
+        return;
+      }
+
+      // Its robots.txt declares the sitemap at its own origin.
+      if (path === "/robots.txt") {
+        res.writeHead(200, { "content-type": "text/plain" });
+        res.end("User-agent: *\nSitemap: https://no-head.test/sitemap.xml\n");
+        return;
+      }
+    }
+
+    // "custom-sitemap.test" declares a sitemap at a non-default path in robots.txt.
+    if (host === "custom-sitemap.test") {
+      if (path === "/robots.txt") {
+        res.writeHead(200, { "content-type": "text/plain" });
+        res.end("User-agent: *\nSitemap: https://custom-sitemap.test/sitemap-index.xml\n");
+        return;
+      }
+
+      if (path === "/sitemap-index.xml") {
+        res.writeHead(200, { "content-type": "application/xml" });
+        res.end(req.method === "HEAD" ? undefined : "<sitemapindex></sitemapindex>");
+        return;
+      }
+
+      // It has no /sitemap.xml at the well-known path.
+      if (path === "/sitemap.xml") {
+        res.writeHead(404, { "content-type": "text/plain" });
+        res.end("Not found");
+        return;
+      }
+    }
+
+    // "no-robots-sitemap.test" has a /sitemap.xml but never mentions it in robots.txt.
+    if (host === "no-robots-sitemap.test" && path === "/robots.txt") {
+      res.writeHead(200, { "content-type": "text/plain" });
+      res.end("User-agent: *\nAllow: /\n");
+      return;
+    }
+
+    // "bad-sitemap.test" declares a sitemap URL that isn't a valid absolute URL.
+    if (host === "bad-sitemap.test" && path === "/robots.txt") {
+      res.writeHead(200, { "content-type": "text/plain" });
+      res.end("User-agent: *\nSitemap: /sitemap.xml\n");
+      return;
+    }
+
     if (path === "/bytes") {
       serveBytes(req, res, new URLSearchParams(search));
       return;

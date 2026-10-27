@@ -25,6 +25,7 @@ import { analyzeContent } from "../analyze-content.js";
 import { analyzeStructuredData } from "../analyze-structured-data.js";
 import { analyzeTechnical } from "../analyze-technical.js";
 import { fetchPageDetails, validatePublicUrl, type FetchedPage } from "../../utils/fetch-page.js";
+import { fetchRobotsTxt } from "../../utils/fetch-robots-txt.js";
 import type { AnalyzerErrorResult, WebsiteAnalysisResult } from "../../types/analyzer-result.js";
 
 function errorMessage(error: unknown): string {
@@ -45,7 +46,10 @@ async function runAnalyzer<T>(
 
 export async function analyzeWebsite(url: string) {
   // Reject invalid, localhost and private URLs up front so no analyzer requests them.
-  await validatePublicUrl(url);
+  const { origin } = await validatePublicUrl(url);
+
+  // robots.txt is fetched once and shared with the robotsTxt and sitemap analyzers.
+  const sharedRobotsTxt = await fetchRobotsTxt(origin);
 
   // Fetch the page once for this call and share it: the HTML with every HTML-based analyzer, and the
   // response (timing, status, headers) with performance, security and technology.
@@ -119,8 +123,8 @@ export async function analyzeWebsite(url: string) {
     runWithHtml(analyzeHreflang),
     runWithHtml(analyzeCharset),
     runAnalyzer(url, () => analyzeSsl(url)),
-    runWithHtml(analyzeSitemap),
-    runAnalyzer(url, () => analyzeRobotsTxt(url)),
+    runAnalyzer(url, () => analyzeSitemap(url, sharedRobotsTxt)),
+    runAnalyzer(url, () => analyzeRobotsTxt(url, sharedRobotsTxt)),
     runAnalyzer(url, () => analyzeSecurity(url, page)),
     runWithHtml(analyzeSocial),
     runWithHtml(analyzeMobile),

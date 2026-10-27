@@ -173,9 +173,15 @@ const CASES: Case[] = [
   {
     name: "sitemap",
     fn: analyzeSitemap,
-    acceptsHtml: true,
-    rich: { sitemapUrl: "https://site.test/sitemap.xml", hasSitemap: true, status: "good" },
-    bare: { sitemapUrl: null, hasSitemap: false, status: "missing" },
+    acceptsHtml: false,
+    rich: {
+      sitemapUrl: "https://site.test/sitemap.xml",
+      hasSitemap: true,
+      source: "robots_txt",
+      declaredInRobotsTxt: true,
+      status: "good",
+    },
+    bare: { sitemapUrl: null, hasSitemap: false, source: null, status: "missing" },
   },
   {
     name: "robotsTxt",
@@ -320,7 +326,7 @@ const FIELD_ORDER: Record<string, string[]> = {
   hreflang: ["url", "entries", "count", "hasHreflang", "status", "issues", "recommendation"],
   charset: ["url", "charset", "hasCharset", "isUtf8", "status", "issues", "recommendation"],
   ssl: ["url", "protocol", "isHttps", "status", "issues", "recommendation"],
-  sitemap: ["url", "sitemapUrl", "hasSitemap", "isValidUrl", "status", "issues", "recommendation"],
+  sitemap: ["url", "sitemapUrl", "hasSitemap", "isValidUrl", "source", "declaredInRobotsTxt", "status", "issues", "recommendation"],
   robotsTxt: ["url", "robotsTxtUrl", "hasRobotsTxt", "isValid", "status", "issues", "recommendation"],
   performance: ["url", "statusCode", "responseTimeMs", "htmlSizeBytes", "status", "issues", "recommendation"],
   security: [
@@ -420,11 +426,8 @@ describe("network usage", () => {
       assertFields(result, c.rich);
     }
 
-    // Only the sitemap analyzer makes its own (HEAD /sitemap.xml) request.
-    assert.deepEqual(
-      stub.requests.map((r) => `${r.method} ${r.path}`),
-      ["HEAD /sitemap.xml"],
-    );
+    // Every analyzer that accepts pre-fetched HTML works from it alone.
+    assert.deepEqual(stub.requests, []);
   });
 
   test("performance, security and technology given a fetched page make no request", async () => {
@@ -454,7 +457,8 @@ describe("network usage", () => {
   test("each individual analyzer makes only its own requests", async () => {
     const expected: Record<string, string[]> = {
       ssl: [],
-      sitemap: ["GET /", "HEAD /sitemap.xml"],
+      // The sitemap analyzer reads robots.txt to find the declared sitemap, then checks it exists.
+      sitemap: ["GET /robots.txt", "HEAD /sitemap.xml"],
       robotsTxt: ["GET /robots.txt"],
     };
 

@@ -10,6 +10,14 @@ Every tool takes one required input, `url` (an HTTP or HTTPS URL), and returns i
 
 Requires Node.js 22 or later (`engines: >=22`; tested on 22.17).
 
+From the npm registry:
+
+```bash
+npm install -g website-intelligence-mcp
+```
+
+Or from a checkout, to run it from source or to work on it:
+
 ```bash
 git clone https://github.com/sandipprajapatiinic/website-intelligence-mcp.git
 cd website-intelligence-mcp
@@ -48,14 +56,14 @@ Register it as a stdio server. From a checkout, after `npm run build`:
 }
 ```
 
-If the package is installed, use `"command": "website-intelligence-mcp"` with no arguments. It can be installed globally from a checkout or from a tarball made by `npm pack`:
+If the package is installed, use `"command": "website-intelligence-mcp"` with no arguments. Besides `npm install -g website-intelligence-mcp`, it can be installed globally from a checkout or from a tarball made by `npm pack`:
 
 ```bash
 npm install -g /path/to/website-intelligence-mcp          # a checkout (run npm run build first)
 npm install -g ./website-intelligence-mcp-1.0.0.tgz       # a tarball
 ```
 
-The package isn't on the npm registry yet. Once it's published, `npm install -g website-intelligence-mcp` will install the same command.
+All three install the same `website-intelligence-mcp` command.
 
 To run from source instead, use `"command": "npx"` with `"args": ["tsx", "/absolute/path/to/website-intelligence-mcp/src/server.ts"]`.
 
@@ -98,7 +106,7 @@ Descriptions are the ones the server registers.
 Notes on specific tools:
 
 - `analyze_ssl` only inspects the URL's protocol and makes no request.
-- `analyze_sitemap` sends a HEAD request for `/sitemap.xml` at the page's origin.
+- `analyze_sitemap` reads `Sitemap:` lines in the origin's robots.txt and checks the first one that exists; if robots.txt declares none, it falls back to `/sitemap.xml` at the origin. Each candidate is checked with a HEAD request, retried with GET if the server answers 403, 405 or 501. The result reports `source` (`robots_txt` or `well_known`) and `declaredInRobotsTxt`; a sitemap found only at the well-known path is `needs_improvement`, because crawlers can't discover it from robots.txt.
 - `analyze_robots_txt` fetches `/robots.txt` at the page's origin. A missing or unreadable file is reported as `missing`, not as an error.
 - `analyze_performance` times one request for the page and reports its status code, HTML size, and response time.
 - `analyze_security` checks HTTPS and the `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, and `Referrer-Policy` headers.
@@ -130,7 +138,7 @@ The TypeScript types for these results are in `src/types/analyzer-result.ts`:
    Nothing is cached or shared between calls.
 3. The analyzers then run concurrently.
 
-A full run makes 3 requests: the page, `/robots.txt`, and a HEAD request for `/sitemap.xml`. robots.txt and the sitemap are separate resources, so they always need their own requests. When a tool is called on its own, it fetches what it needs itself.
+A full run makes 3 requests: the page, `/robots.txt` (fetched once and shared by the `robotsTxt` and `sitemap` analyzers), and a HEAD request for the sitemap. robots.txt and the sitemap are separate resources, so they always need their own requests. When a tool is called on its own, it fetches what it needs itself.
 
 The result has 26 sections under `analyses`, in this order: `title`, `meta`, `headings`, `images`, `links`, `canonical`, `robots`, `openGraph`, `schema`, `viewport`, `lang`, `favicon`, `hreflang`, `charset`, `ssl`, `sitemap`, `robotsTxt`, `performance`, `security`, `social`, `mobile`, `technology`, `accessibility`, `content`, `structuredData`, `technical`. Each section is the same result the matching individual tool returns (apart from timing values such as `responseTimeMs`).
 
@@ -201,7 +209,7 @@ Both apply the same rules:
 npm test
 ```
 
-Runs 211 tests with Node's built-in test runner (`node:test`), in about 11 seconds. Most of that is one check of the 10-second timeout.
+Runs 219 tests with Node's built-in test runner (`node:test`), in about 11 seconds. Most of that is one check of the 10-second timeout.
 
 The suite is deterministic and doesn't need internet access:
 - **Stub server:** a local HTTP server serves the test pages, redirects, oversized bodies, stalled responses, and gzip responses.
@@ -216,6 +224,7 @@ The production URL, DNS, redirect, timeout, size, and content-type checks run un
 | `test/fetch-page.test.ts` | `fetchPage`, `fetchPageDetails`, and `safeFetch`: success, redirects, content type, status codes, size limits, gzip, closing connections for unread bodies, timeouts |
 | `test/dns-rebinding.test.ts` | The connect-time DNS check, for direct requests, redirects, analyzers, and `analyze_website` |
 | `test/analyzers.test.ts` | All 26 analyzers on a fully populated page and on a bare page, the common result fields, each analyzer's field names and order, and network usage |
+| `test/sitemap-discovery.test.ts` | Reading `Sitemap:` lines from robots.txt, the `/sitemap.xml` fallback, the GET retry when HEAD is rejected, and reuse of a pre-fetched robots.txt |
 | `test/structured-data-rules.test.ts` | `analyze_structured_data` status rules (no JSON-LD, invalid JSON-LD, no `@type`, valid with `@type`) and agreement with `analyze_schema` |
 | `test/analyzer-result.test.ts` | The shared result types (compile-time checks run by `npm run typecheck`) |
 | `test/analyze-website.test.ts` | The combined result and its 26 sections (compared with direct analyzer calls), the single page fetch and 3-request budget, no sharing between calls, and partial errors |
@@ -247,7 +256,7 @@ Calling `analyze_title` with `{ "url": "https://example.com" }` returns:
 
 - **No JavaScript rendering:** analyzers read the HTML the server returns, so content added by client-side JavaScript isn't seen.
 - **`safeFetch` doesn't check content type:** analyzers that read the page through it (performance, security, technology, and the HTML analyzers that fetch the page themselves) accept any content type. Only `fetchPage` requires `text/html`.
-- **Sitemap detection:** `analyze_sitemap` only checks `/sitemap.xml` with a HEAD request. It doesn't read `Sitemap:` lines in robots.txt, and it reports `missing` if the server rejects HEAD requests.
+- **Sitemap detection:** `analyze_sitemap` checks that a sitemap URL responds, but doesn't fetch or parse the sitemap itself, so it doesn't validate its XML, follow a sitemap index, or count its URLs. If robots.txt declares several sitemaps, only the first one that exists is reported.
 - **Responses over 5 MB:** analyzers report an error instead of analyzing a partial page. An oversized robots.txt is reported as `missing`.
 - **HTTPS in the test suite:** the stub server is plain HTTP, so `npm test` doesn't exercise real TLS connections.
 - **Ports and concurrency:** any port on a public host is allowed (for example `:8080`), and there's no limit on how many tool calls or requests run at once.

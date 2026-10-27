@@ -281,7 +281,7 @@ describe("safeFetch size limit", () => {
     await assert.rejects(analyzeTechnology(bytes(6_000_000, "declared")), { message: "Response is too large" });
 
     // The sitemap check is a HEAD request, so a large sitemap is still detected.
-    const sitemap = await analyzeSitemap("https://site.test/", "<html></html>");
+    const sitemap = await analyzeSitemap("https://site.test/");
     assert.equal(sitemap.hasSitemap, true);
   });
 });

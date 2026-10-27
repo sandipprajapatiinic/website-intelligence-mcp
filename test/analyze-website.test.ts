@@ -39,7 +39,7 @@ import type {
 
 // Sections that need the page HTML from the shared fetch.
 const HTML_SECTIONS = SECTION_KEYS.filter(
-  (key) => !["ssl", "robotsTxt", "performance", "security", "technology"].includes(key),
+  (key) => !["ssl", "sitemap", "robotsTxt", "performance", "security", "technology"].includes(key),
 );
 
 // Results are checked as the JSON MCP clients receive, typed with the shared result types.
@@ -194,7 +194,10 @@ describe("analyze_website partial errors", () => {
     const thrown = ["performance", "security", "technology"];
 
     assert.equal(result.status, "completed_with_errors");
-    assert.deepEqual(result.failedAnalyzers, SECTION_KEYS.filter((key) => key !== "ssl" && key !== "robotsTxt"));
+    assert.deepEqual(
+      result.failedAnalyzers,
+      SECTION_KEYS.filter((key) => !["ssl", "sitemap", "robotsTxt"].includes(key)),
+    );
     assert.deepEqual(Object.keys(result.analyses), SECTION_KEYS);
 
     for (const key of thrown) {
@@ -225,7 +228,7 @@ describe("analyze_website partial errors", () => {
       });
     }
 
-    for (const key of ["ssl", "robotsTxt", "performance", "security", "technology"]) {
+    for (const key of ["ssl", "sitemap", "robotsTxt", "performance", "security", "technology"]) {
       assert.notEqual(result.analyses[key].status, "error", key);
     }
 

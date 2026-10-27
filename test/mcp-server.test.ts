@@ -105,7 +105,7 @@ describe("tool calls", () => {
     const json = parse(await call("analyze_website", "https://site.test/json-then-drop"));
 
     assert.equal(json.status, "completed_with_errors");
-    assert.equal(json.failedAnalyzers.length, 24);
+    assert.equal(json.failedAnalyzers.length, 23);
     assert.ok(json.failedAnalyzers.includes("performance"));
     assert.equal(json.analyses.ssl.status, "good");
   });

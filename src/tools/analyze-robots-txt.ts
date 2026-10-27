@@ -1,33 +1,18 @@
-import { discardBody, safeFetch, validatePublicUrl } from "../utils/fetch-page.js";
+import { validatePublicUrl } from "../utils/fetch-page.js";
+import { fetchRobotsTxt, type FetchedRobotsTxt } from "../utils/fetch-robots-txt.js";
 import { analyzeRobotsTxtRules, type RobotsTxtAnalysis } from "../seo/robots-txt-rules.js";
 import type { AnalyzerResult } from "../types/analyzer-result.js";
 
-export async function analyzeRobotsTxt(url: string): Promise<AnalyzerResult<RobotsTxtAnalysis>> {
-  const origin = (await validatePublicUrl(url)).origin;
-  const robotsTxtUrl = `${origin}/robots.txt`;
-
-  console.error(`Fetching robots.txt: ${robotsTxtUrl}`);
-
-  let content: string | null = null;
-
-  try {
-    const response = await safeFetch(robotsTxtUrl);
-
-    if (response.ok) {
-      content = await response.text();
-      console.error(
-        `robots.txt received: ${content.length} characters`,
-      );
-    } else {
-      await discardBody(response);
-    }
-  } catch {
-    content = null;
-  }
+export async function analyzeRobotsTxt(
+  url: string,
+  prefetchedRobotsTxt?: FetchedRobotsTxt,
+): Promise<AnalyzerResult<RobotsTxtAnalysis>> {
+  const robotsTxt =
+    prefetchedRobotsTxt ?? (await fetchRobotsTxt((await validatePublicUrl(url)).origin));
 
   const analysis = analyzeRobotsTxtRules(
-    content !== null ? robotsTxtUrl : null,
-    content,
+    robotsTxt.content !== null ? robotsTxt.robotsTxtUrl : null,
+    robotsTxt.content,
   );
 
   return {
